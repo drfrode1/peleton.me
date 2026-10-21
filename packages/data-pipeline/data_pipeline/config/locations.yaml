@@ -1,0 +1,42 @@
+settings:
+  default_history_days: 90
+
+locations:
+  - id: "forus"
+    name: "Forus Industrial Park"
+    coordinates:
+      lat: 58.8913
+      lon: 5.7276
+    
+    # -------------------------------------------------------------------------
+    # SOURCE CONNECTIONS
+    # -------------------------------------------------------------------------
+    sources:
+      met_frost:
+        enabled: true
+        element_ids:
+          - "air_temperature"
+          - "sum(precipitation_amount PT1H)"
+          - "wind_speed"
+      
+      statens_vegvesen:
+        enabled: true
+        sensor_ids:
+          - "00001-01"  # Example Traffic Registration Point ID (TRP)
+          - "00002-02"
+
+  - id: "algard"
+    name: "Ålgård Center"
+    coordinates:
+      lat: 58.7621
+      lon: 5.8525
+    sources:
+      met_frost:
+        enabled: true
+        element_ids:
+          - "air_temperature"
+          - "sum(precipitation_amount PT1H)"
+      statens_vegvesen:
+        enabled: true
+        sensor_ids:
+          - "00003-01"

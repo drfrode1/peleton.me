@@ -1,0 +1,121 @@
+services:
+  # ---------------------------------------------------------------------------
+  # LOCAL DATABASES & STORAGE
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: peleton-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-peleton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-peleton_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-peleton_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peleton} -d ${POSTGRES_DB:-peleton_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: chrislusf/seaweedfs:latest
+    container_name: peleton-minio
+    ports:
+      - "9000:8333" # S3 API endpoint
+      - "8888:8888" # Filer Web UI
+    command: "server -s3 -s3.port=8333 -dir=/data -ip.bind=0.0.0.0"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8333/"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  minio-init:
+    image: curlimages/curl:latest
+    container_name: peleton-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Initializing local R2 bucket...';
+      curl -s -X PUT http://minio:8333/peleton-r2-bucket || true;
+      echo 'Bucket ready!';
+      exit 0;
+      "
+
+  # ---------------------------------------------------------------------------
+  # APPLICATIONS & PIPELINES
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+    container_name: peleton-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+    container_name: peleton-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - duckdb_data:/app/data
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - LOCAL_DUCKDB_PATH=/app/data/dev.duckdb
+      - MOTHERDUCK_TOKEN
+      - R2_ENDPOINT=http://minio:8333
+      - R2_ACCESS_KEY_ID=test
+      - R2_SECRET_ACCESS_KEY=test
+      - R2_BUCKET_NAME=peleton-r2-bucket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  data-pipeline:
+    build:
+      context: ./packages/data-pipeline
+      dockerfile: Dockerfile.dev
+    container_name: peleton-data-pipeline
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./packages/data-pipeline:/app
+      - duckdb_data:/app/data
+    environment:
+      - FROST_CLIENT_ID=${FROST_CLIENT_ID}
+      - FROST_CLIENT_SECRET=${FROST_CLIENT_SECRET}
+      - SSL_VERIFY=${SSL_VERIFY:-true}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://peleton:peleton_dev_pass@postgres:5432/peleton_dev}
+      - MOTHERDUCK_TOKEN
+      - LOCAL_DUCKDB_PATH=/app/data/dev.duckdb
+      - R2_ENDPOINT=http://minio:8333
+      - R2_ACCESS_KEY_ID=test
+      - R2_SECRET_ACCESS_KEY=test
+      - R2_BUCKET_NAME=peleton-r2-bucket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  minio_data:
+  duckdb_data:

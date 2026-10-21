@@ -1,0 +1,3 @@
+setup:
+  - project: peleton-me
+    config: dev_personal

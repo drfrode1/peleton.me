@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: peleton-api
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerContext: ./apps/api
+    dockerfilePath: ./apps/api/Dockerfile
+    startCommand: uvicorn peleton_api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Hentes fra Render Dashboard eller Doppler Integration
+      - key: MOTHERDUCK_TOKEN
+        sync: false
+      - key: LOCAL_DUCKDB_PATH
+        value: /app/data/dev.duckdb
