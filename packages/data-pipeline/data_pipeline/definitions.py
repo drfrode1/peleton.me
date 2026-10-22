@@ -4,10 +4,32 @@ import boto3
 from botocore.client import Config
 from dagster import Definitions, ScheduleDefinition, define_asset_job
 
-from data_pipeline.assets.bronze import weather_frost
+from data_pipeline.assets import traffic_volumes, travel_times, weather_frost
 from data_pipeline.resources import MotherDuckResource
 
-# Define Job
+travel_times_job = define_asset_job(
+    name="travel_times_rush_hour_job",
+    selection=["bronze_travel_times_vegvesen", "silver_travel_times_vegvesen"]
+)
+
+# Schedule: Every 5 minutes during rush hours (06:00-09:00 and 15:00-18:00), Monday to Friday.
+travel_times_schedule = ScheduleDefinition(
+    job=travel_times_job,
+    cron_schedule="*/5 6-8,15-17 * * 1-5",
+    execution_timezone="Europe/Oslo",
+)
+
+traffic_volumes_job = define_asset_job(
+    name="traffic_volumes_rush_hour_job",
+    selection=["bronze_traffic_volumes_vegvesen", "silver_traffic_volumes_vegvesen"]
+)
+
+traffic_volumes_schedule = ScheduleDefinition(
+    job=traffic_volumes_job,
+    cron_schedule="*/5 6-8,15-17 * * 1-5", # Rush hours: 06:00-09:00 & 15:00-18:00, Mon-Fri
+    execution_timezone="Europe/Oslo",
+)
+
 weather_job = define_asset_job(
     name="bronze_weather_hourly_job",
     selection=["bronze_weather_met_frost"],
@@ -17,29 +39,14 @@ weather_job = define_asset_job(
 hourly_weather_schedule = ScheduleDefinition(
     job=weather_job,
     cron_schedule="0 * * * *",
+    execution_timezone="Europe/Oslo",
 )
 
 # Read Environment Variables (with local fallback defaults for SeaweedFS/R2)
-endpoint_url = os.getenv("R2_ENDPOINT", "http://minio:8333")
+endpoint_url = os.getenv("R2_ENDPOINT", "http://localhost:9000")
 access_key_id = os.getenv("R2_ACCESS_KEY_ID", "test")
 secret_access_key = os.getenv("R2_SECRET_ACCESS_KEY", "test")
 region_name = os.getenv("R2_REGION_NAME", "auto")
-
-# Validate required S3/R2 settings
-missing_vars = [
-    var_name
-    for var_name, var_val in [
-        ("R2_ENDPOINT", endpoint_url),
-        ("R2_ACCESS_KEY_ID", access_key_id),
-        ("R2_SECRET_ACCESS_KEY", secret_access_key),
-    ]
-    if not var_val
-]
-
-if missing_vars:
-    raise RuntimeError(
-        f"Missing required environment variables for S3/R2 client: {', '.join(missing_vars)}"
-    )
 
 # Configure boto3 client for S3/R2 compatibility
 s3_client = boto3.client(
@@ -52,9 +59,23 @@ s3_client = boto3.client(
 )
 
 defs = Definitions(
-    assets=[weather_frost.bronze_weather_met_frost],
-    jobs=[weather_job],
-    schedules=[hourly_weather_schedule],
+    assets=[
+        weather_frost.bronze_weather_met_frost,
+        travel_times.bronze_travel_times_vegvesen,
+        travel_times.silver_travel_times_vegvesen,
+        traffic_volumes.bronze_traffic_volumes_vegvesen,
+        traffic_volumes.silver_traffic_volumes_vegvesen,
+    ],
+    jobs=[
+        weather_job,
+        travel_times_job,
+        traffic_volumes_job, 
+    ],
+    schedules=[
+        hourly_weather_schedule,
+        travel_times_schedule,
+        traffic_volumes_schedule, 
+    ],
     resources={
         "s3": s3_client,
         "motherduck": MotherDuckResource(),

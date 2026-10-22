@@ -79,14 +79,38 @@ db-seed:
     doppler run -- bun --filter @peleton/db db:seed
 
 # ------------------------------------------------------------------------------
-# QUALITY & TYPECHECKS
+# TESTING & QUALITY CHECKS
 # ------------------------------------------------------------------------------
+
+# Run automated tests across all services and packages
+test: test-api test-pipeline test-web test-db
+    @echo "✅ All test suites passed!"
+
+# Run FastAPI backend tests
+test-api:
+    @echo "🧪 Running API tests (pytest)..."
+    cd apps/api && uv run pytest
+
+# Run Dagster data pipeline tests
+test-pipeline:
+    @echo "🧪 Running Data Pipeline tests (pytest)..."
+    cd packages/data-pipeline && uv run pytest
+
+# Run Web frontend tests
+test-web:
+    @echo "🧪 Running Web frontend tests..."
+    cd apps/web && bun test
+
+# Run Database schema tests
+test-db:
+    @echo "🧪 Running Database tests..."
+    cd packages/db && bun test
 
 # Run typechecks and linter checks across all services
 check:
     @echo "🧹 Checking TypeScript types for web & db..."
     doppler run -- sh -c "cd apps/web && bun run typecheck"
-    doppler run -- bun --filter @peleton/db exec tsc --noEmit
+    doppler run -- bun --filter @peleton/db typecheck
     @echo "🐍 Checking Python code for API with ruff..."
     cd apps/api && uv run ruff check .
     @echo "📊 Checking Python code for Data Pipeline with ruff..."

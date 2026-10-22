@@ -1,32 +1,28 @@
-# React + TypeScript + Vite
+# @peleton/web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+TanStack React 19 web application for **peleton.me**.
 
-Currently, two official plugins are available:
+## Architecture & Responsibilities
+- **Frontend Stack**: Built with React 19, TanStack Router (file-based routing), TanStack Query v5, Tailwind CSS v4, and Vite (running on Bun).
+- **Lakehouse Consumption**: Consumes the FastAPI middleware analytics endpoints via type-safe API clients and the centralized `queryOptions` pattern with route loader prefetching.
+- **Deployment**: Deployed on **Vercel** (`vercel.json`).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Getting Started
+```bash
+# Install dependencies
+bun install
 
-## React Compiler
+# Start Vite dev server (localhost:3000)
+bun run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Run TypeScript typechecks
+bun run typecheck
 
-## Expanding the Oxlint configuration
+# Run unit tests
+bun test
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# Build for production
+bun run build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+For full routing, caching, and UI conventions, see [`GEMINI.md`](./GEMINI.md).

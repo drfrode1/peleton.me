@@ -7,10 +7,6 @@ locations:
     coordinates:
       lat: 58.8913
       lon: 5.7276
-    
-    # -------------------------------------------------------------------------
-    # SOURCE CONNECTIONS
-    # -------------------------------------------------------------------------
     sources:
       met_frost:
         enabled: true
@@ -19,11 +15,16 @@ locations:
           - "sum(precipitation_amount PT1H)"
           - "wind_speed"
       
-      statens_vegvesen:
+      travel_times:
         enabled: true
-        sensor_ids:
-          - "00001-01"  # Example Traffic Registration Point ID (TRP)
-          - "00002-02"
+        section_ids:
+          - "100357"  # Example DATEX II Predefined Location Reference ID for travel time
+          - "100356"
+
+      traffic_volumes:
+        enabled: true
+        trp_ids:
+          - "13433V319582" # Example Traffic Registration Point ID for car/bicycle counting
 
   - id: "algard"
     name: "Ålgård Center"
@@ -36,7 +37,12 @@ locations:
         element_ids:
           - "air_temperature"
           - "sum(precipitation_amount PT1H)"
-      statens_vegvesen:
+      
+      travel_times:
+        enabled: false
+        section_ids: []
+
+      traffic_volumes:
         enabled: true
-        sensor_ids:
-          - "00003-01"
+        trp_ids:
+          - "44656V72812"

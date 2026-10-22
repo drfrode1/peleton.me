@@ -18,6 +18,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   minio:
     image: chrislusf/seaweedfs:latest
@@ -25,14 +26,15 @@ services:
     ports:
       - "9000:8333" # S3 API endpoint
       - "8888:8888" # Filer Web UI
-    command: "server -s3 -s3.port=8333 -dir=/data -ip.bind=0.0.0.0"
+    command: "server -s3 -s3.port=8333 -dir=/data -ip=minio -ip.bind=0.0.0.0"
     volumes:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8333/"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   minio-init:
     image: curlimages/curl:latest
@@ -47,6 +49,7 @@ services:
       echo 'Bucket ready!';
       exit 0;
       "
+    restart: on-failure
 
   # ---------------------------------------------------------------------------
   # APPLICATIONS & PIPELINES
@@ -63,6 +66,9 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    depends_on:
+      api:
+        condition: service_healthy
 
   api:
     build:
@@ -75,13 +81,24 @@ services:
       - ./apps/api:/app
       - duckdb_data:/app/data
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DOCKER_DATABASE_URL:-postgresql://peleton:peleton_dev_pass@postgres:5432/peleton_dev}
       - LOCAL_DUCKDB_PATH=/app/data/dev.duckdb
       - MOTHERDUCK_TOKEN
       - R2_ENDPOINT=http://minio:8333
       - R2_ACCESS_KEY_ID=test
       - R2_SECRET_ACCESS_KEY=test
       - R2_BUCKET_NAME=peleton-r2-bucket
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID:-123456}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET:-dev_strava_secret}
+      - STRAVA_REDIRECT_URI=${STRAVA_REDIRECT_URI:-http://localhost:8000/api/v1/strava/callback}
+      - STRAVA_TOKEN_ENCRYPTION_KEY=${STRAVA_TOKEN_ENCRYPTION_KEY:-MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,7 +119,7 @@ services:
       - FROST_CLIENT_ID=${FROST_CLIENT_ID}
       - FROST_CLIENT_SECRET=${FROST_CLIENT_SECRET}
       - SSL_VERIFY=${SSL_VERIFY:-true}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://peleton:peleton_dev_pass@postgres:5432/peleton_dev}
+      - DATABASE_URL=${DOCKER_DATABASE_URL:-postgresql://peleton:peleton_dev_pass@postgres:5432/peleton_dev}
       - MOTHERDUCK_TOKEN
       - LOCAL_DUCKDB_PATH=/app/data/dev.duckdb
       - R2_ENDPOINT=http://minio:8333

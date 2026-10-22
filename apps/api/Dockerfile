@@ -1,17 +1,22 @@
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# Copy dependency and metadata files first (including README.md)
+# Install curl for container healthchecks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency and metadata files first
 COPY pyproject.toml uv.lock* README.md ./
 
-# Copy the package source directory
+# Copy package source directory
 COPY peleton_api ./peleton_api
 
-# Install dependencies AND the local package system-wide
-RUN uv pip install --system -e .
+# Install production package system-wide
+RUN uv pip install --system .
 
-# Copy the rest of the project files
+# Copy remaining project files
 COPY . .
 
 EXPOSE 8000

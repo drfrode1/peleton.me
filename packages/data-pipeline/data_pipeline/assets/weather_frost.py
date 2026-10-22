@@ -1,12 +1,11 @@
 import os
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any, cast
 
 import duckdb
 import httpx
-import yaml
 from dagster import AssetExecutionContext, ResourceParam, asset
+
 from data_pipeline.utils.storage import archive_bronze_payload
 
 FROST_OBSERVATIONS_URL = "https://frost.met.no/observations/v0.jsonld"
@@ -19,11 +18,8 @@ def bronze_weather_met_frost(
     s3: ResourceParam[Any]
 ) -> str:
     """Ingests MET Frost weather observations based on locations.yaml configuration."""
-    config_path = Path(__file__).parent.parent.parent / "config" / "locations.yaml"
-    with open(config_path, "r", encoding="utf-8") as f:
-        loaded_config: Any = yaml.safe_load(f)
-
-    config: dict[str, Any] = loaded_config if isinstance(loaded_config, dict) else {}
+    from data_pipeline.utils.config_loader import load_locations_config
+    config = load_locations_config()
 
     settings: dict[str, Any] = config.get("settings", {}) if isinstance(config.get("settings"), dict) else {}
     default_days: int = int(settings.get("default_history_days", 90))

@@ -16,5 +16,6 @@ class MotherDuckResource(ConfigurableResource):
         if token:
             return duckdb.connect(f"md:{self.database_name}?token={token}")
         
-        # Fallback til lokal DuckDB-fil for offline/lokal utvikling
-        return duckdb.connect(f"{self.database_name}_local.duckdb")
+        # Fallback til lokal DuckDB-fil for offline/lokal utvikling (deles med API via LOCAL_DUCKDB_PATH)
+        path = os.getenv("LOCAL_DUCKDB_PATH", f"{self.database_name}_local.duckdb")
+        return duckdb.connect(path)

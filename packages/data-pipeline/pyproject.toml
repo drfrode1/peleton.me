@@ -24,3 +24,9 @@ packages = ["data_pipeline"]
 
 [tool.dagster]
 module_name = "data_pipeline"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]

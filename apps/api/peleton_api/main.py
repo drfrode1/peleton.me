@@ -3,12 +3,20 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from peleton_api.api.v1.endpoints import companies, users, weather
+from peleton_api.api.v1.endpoints import companies, strava, users, weather
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🚀 API starting up...")
+    try:
+        from peleton_api.core.database import Base, get_engine
+        import peleton_api.models.models  # noqa: F401
+
+        Base.metadata.create_all(bind=get_engine())
+        print("✅ Database tables verified/created.")
+    except Exception as e:
+        print(f"⚠️  Database initialization warning: {e}")
     yield
     print("🛑 API shutting down...")
 
@@ -32,6 +40,7 @@ app.add_middleware(
 )
 
 app.include_router(companies.router, prefix="/api/v1/companies", tags=["Companies"])
+app.include_router(strava.router, prefix="/api/v1/strava", tags=["Strava"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(weather.router, prefix="/api/v1/weather", tags=["Weather"])
 

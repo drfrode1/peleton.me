@@ -14,13 +14,16 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "bun run src/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "bun run src/seed.ts"
+    "db:seed": "bun run src/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "drizzle-orm": "^0.31.2",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.3",
     "@types/node": "^20.0.0",
     "drizzle-kit": "^0.22.8",
     "typescript": "^5.0.0"
